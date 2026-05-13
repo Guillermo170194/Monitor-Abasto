@@ -260,34 +260,6 @@ def cargar():
         .str.replace(" ", "", regex=False)
     )
 
-        # =========================
-    # LIMPIAR CONSOLIDADA
-    # =========================
-
-    df["ENTIDAD"] = (
-        df[df.columns[1]]
-        .astype(str)
-        .str.strip()
-        .str.upper()
-        .str.normalize("NFKD")
-        .str.encode("ascii", errors="ignore")
-        .str.decode("utf-8")
-        .str.replace(".", "", regex=False)
-    )
-
-    df["ENTIDAD"] = (
-        df["ENTIDAD"]
-        .replace(reemplazos)
-    )
-
-    df["CLAVE"] = (
-        df[df.columns[2]]
-        .astype(str)
-        .str.strip()
-        .str.replace(".", "", regex=False)
-        .str.replace(" ", "", regex=False)
-    )
-
     # =========================
     # MERGE INVENTARIO
     # =========================
