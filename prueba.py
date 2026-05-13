@@ -44,8 +44,20 @@ st.markdown(
 # =========================
 # ARCHIVO
 # =========================
-archivo = r"C:\Users\guillermo.ortega\IMSS-BIENESTAR\Emisión y Proveeduría - Consolidada 2026\Consolidada 2026 IMB.xlsb"
+# =========================
+# CARGA DE ARCHIVO
+# =========================
 
+st.sidebar.markdown("## 📂 Cargar archivo")
+
+archivo = st.sidebar.file_uploader(
+    "Subir Consolidada",
+    type=["xlsb", "xlsx"]
+)
+
+if archivo is None:
+    st.warning("⬅ Debes cargar la consolidada.")
+    st.stop()
 @st.cache_data(show_spinner=False)
 def cargar():
     df = pd.read_excel(
@@ -310,7 +322,7 @@ with c4:
 # =========================
 # POWERPOINT
 # =========================
-MACHOTE = r"C:\Users\guillermo.ortega\OneDrive - IMSS-BIENESTAR\Escritorio\python\MACHOTE_PRESENTACIÓN.pptx"
+MACHOTE = "MACHOTE_PRESENTACIÓN.pptx"
 
 def obtener_layout(prs):
     if len(prs.slide_layouts) > 5:
