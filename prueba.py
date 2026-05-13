@@ -322,7 +322,7 @@ with c4:
 # =========================
 # POWERPOINT
 # =========================
-MACHOTE = "MACHOTE_PRESENTACIÓN.pptx"
+MACHOTE = "MACHOTE_PRESENTACION.pptx"
 
 def obtener_layout(prs):
     if len(prs.slide_layouts) > 5:
