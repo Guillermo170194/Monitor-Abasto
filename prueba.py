@@ -629,6 +629,49 @@ def fmt(x):
 def fmt_money(x):
     return f"${int(x):,}"
 
+def formatear_clave(clave):
+
+    clave = str(clave)
+
+    clave = (
+        clave
+        .replace(".", "")
+        .replace(" ", "")
+        .replace("-", "")
+    )
+
+    if not clave.isdigit():
+        return clave
+
+    # 3-3-4-2
+    if len(clave) == 12:
+
+        return (
+            clave[:3] + "." +
+            clave[3:6] + "." +
+            clave[6:10] + "." +
+            clave[10:]
+        )
+
+    # 3-3-4
+    elif len(clave) == 10:
+
+        return (
+            clave[:3] + "." +
+            clave[3:6] + "." +
+            clave[6:]
+        )
+
+    # 3-3-3
+    elif len(clave) == 9:
+
+        return (
+            clave[:3] + "." +
+            clave[3:6] + "." +
+            clave[6:]
+        )
+
+    return clave
 # =========================
 # MÉTRICAS
 # =========================
@@ -1294,8 +1337,8 @@ if menu == "🔎 Buscar Clave":
 
             st.markdown(
                 f"### 🔎 Clave encontrada: {descripcion}"
-
             )
+
             # =========================
             # REDISTRIBUCIÓN SUGERIDA
             # =========================
@@ -1360,7 +1403,8 @@ if menu == "🔎 Buscar Clave":
 
                 st.success(
                     "No se detectaron redistribuciones sugeridas."
-            )
+                )
+
             tabla_busqueda = tabla_busqueda.sort_values(
                 "Inventario",
                 ascending=False
@@ -1375,7 +1419,13 @@ if menu == "🔎 Buscar Clave":
                 tabla_busqueda,
                 use_container_width=True,
                 hide_index=True
-                )
+            )
+
+        else:
+
+            st.error(
+                "No se encontró la clave."
+            )
 if menu == "📍 Estados":
 
     # =========================
@@ -1959,6 +2009,49 @@ if menu == "🚨 Alertas":
 
     alertas = base_busqueda.copy()
 
+    alertas = (
+        alertas.groupby(
+            ["CLAVE_MERGE"],
+            dropna=False
+        )
+    .agg({
+        "CLAVE": lambda x: (
+            x[
+                x.astype(str)
+                .str.contains(r"\.")
+            ].iloc[0]
+            if len(
+                x[
+                    x.astype(str)
+                    .str.contains(r"\.")
+                ]
+            ) > 0
+            else (
+                x.dropna().iloc[0]
+                if len(x.dropna()) > 0
+                else None
+            )
+        ),
+            col_descripcion: "first",
+            "PIEZAS_INV": "sum",
+            "CPM": "sum"
+        })
+        .reset_index()
+    )
+
+    alertas["CLAVE"] = (
+        alertas["CLAVE"]
+        .fillna(
+            alertas["CLAVE_MERGE"]
+        )
+        .apply(formatear_clave)
+    )
+
+    alertas[col_descripcion] = (
+        alertas[col_descripcion]
+        .fillna("SIN DESCRIPCIÓN")
+    )
+
     alertas["NIVEL_ABASTO"] = 0.0
 
     mask = alertas["CPM"] > 0
@@ -2074,8 +2167,8 @@ if menu == "🚨 Alertas":
     st.dataframe(
         agotado[
             [
-                "ENTIDAD",
                 "CLAVE",
+                col_descripcion,
                 "PIEZAS_INV",
                 "CPM"
             ]
@@ -2091,8 +2184,8 @@ if menu == "🚨 Alertas":
 
     excel_alertas = excel_alertas[
         [
-            "ENTIDAD",
             "CLAVE",
+            col_descripcion,
             "PIEZAS_INV",
             "CPM",
             "NIVEL_ABASTO"
@@ -2113,6 +2206,231 @@ if menu == "🚨 Alertas":
             f,
             file_name=archivo_excel
         )
+# =========================
+# ANALÍTICA NACIONAL
+# =========================
+
+if menu == "📊 Analítica":
+
+    st.markdown(
+        "## 📊 Centro analítico nacional"
+    )
+
+    # =========================
+    # BASE ANALÍTICA NACIONAL
+    # =========================
+
+    analitica = (
+        base_busqueda.groupby(
+            ["CLAVE_MERGE"],
+            dropna=False
+        )
+    .agg({
+        "CLAVE": lambda x: (
+            x[
+                x.astype(str)
+                .str.contains(r"\.")
+            ].iloc[0]
+            if len(
+                x[
+                    x.astype(str)
+                    .str.contains(r"\.")
+                ]
+            ) > 0
+            else (
+                x.dropna().iloc[0]
+                if len(x.dropna()) > 0
+                else None
+            )
+        ),  
+            col_descripcion: "first",
+            "PIEZAS_INV": "sum",
+            "CPM": "sum"
+        })
+        .reset_index()
+    )
+
+    analitica["CLAVE"] = (
+        analitica["CLAVE"]
+        .fillna(
+            analitica["CLAVE_MERGE"]
+        )
+        .apply(formatear_clave)
+    )
+    analitica[col_descripcion] = (
+        analitica[col_descripcion]
+        .fillna("SIN DESCRIPCIÓN")
+    )
+
+    analitica["NIVEL_ABASTO"] = 0.0
+
+    mask = analitica["CPM"] > 0
+
+    analitica.loc[mask, "NIVEL_ABASTO"] = (
+        analitica["PIEZAS_INV"] /
+        analitica["CPM"]
+    )
+
+    analitica.loc[
+        (analitica["PIEZAS_INV"] > 0) &
+        (analitica["CPM"] == 0),
+        "NIVEL_ABASTO"
+    ] = 2
+
+    # =========================
+    # TOP AGOTADAS CRÍTICAS
+    # =========================
+
+    st.markdown(
+        "## 🔴 Top claves agotadas críticas"
+    )
+
+    agotadas = analitica[
+        (analitica["PIEZAS_INV"] == 0) &
+        (analitica["CPM"] > 0)
+    ].copy()
+
+    agotadas = agotadas.sort_values(
+        "CPM",
+        ascending=False
+    )
+
+    agotadas = agotadas.rename(columns={
+        "CLAVE": "Clave",
+        col_descripcion: "Descripción",
+        "PIEZAS_INV": "Inventario",
+        "CPM": "CPM"
+    })
+
+    st.dataframe(
+        agotadas[
+            [
+                "Clave",
+                "Descripción",
+                "Inventario",
+                "CPM"
+            ]
+        ].head(20),
+        use_container_width=True,
+        hide_index=True
+    )
+
+    # =========================
+    # TOP RIESGO
+    # =========================
+
+    st.markdown(
+        "## 🟠 Top claves en riesgo"
+    )
+
+    riesgo = analitica[
+        (analitica["NIVEL_ABASTO"] > 0) &
+        (analitica["NIVEL_ABASTO"] < 1)
+    ].copy()
+
+    riesgo = riesgo.sort_values(
+        "NIVEL_ABASTO"
+    )
+
+    riesgo = riesgo.rename(columns={
+        "CLAVE": "Clave",
+        col_descripcion: "Descripción",
+        "PIEZAS_INV": "Inventario",
+        "CPM": "CPM",
+        "NIVEL_ABASTO": "Nivel"
+    })
+
+    st.dataframe(
+        riesgo[
+            [
+                "Clave",
+                "Descripción",
+                "Inventario",
+                "CPM",
+                "Nivel"
+            ]
+        ].head(20),
+        use_container_width=True,
+        hide_index=True
+    )
+
+    # =========================
+    # TOP SOBRE STOCK
+    # =========================
+
+    st.markdown(
+        "## 🔵 Top claves sobre stock"
+    )
+
+    sobrestock = analitica[
+        analitica["NIVEL_ABASTO"] > 5
+    ].copy()
+
+    sobrestock = sobrestock.sort_values(
+        "NIVEL_ABASTO",
+        ascending=False
+    )
+
+    sobrestock = sobrestock.rename(columns={
+        "CLAVE": "Clave",
+        col_descripcion: "Descripción",
+        "PIEZAS_INV": "Inventario",
+        "CPM": "CPM",
+        "NIVEL_ABASTO": "Nivel"
+    })
+
+    st.dataframe(
+        sobrestock[
+            [
+                "Clave",
+                "Descripción",
+                "Inventario",
+                "CPM",
+                "Nivel"
+            ]
+        ].head(20),
+        use_container_width=True,
+        hide_index=True
+    )
+
+    # =========================
+    # MEJOR COBERTURA
+    # =========================
+
+    st.markdown(
+        "## 🟢 Mejor cobertura nacional"
+    )
+
+    mejor = analitica[
+        analitica["CPM"] > 0
+    ].copy()
+
+    mejor = mejor.sort_values(
+        "NIVEL_ABASTO",
+        ascending=False
+    )
+
+    mejor = mejor.rename(columns={
+        "CLAVE": "Clave",
+        col_descripcion: "Descripción",
+        "PIEZAS_INV": "Inventario",
+        "CPM": "CPM",
+        "NIVEL_ABASTO": "Nivel"
+    })
+
+    st.dataframe(
+        mejor[
+            [
+                "Clave",
+                "Descripción",
+                "Inventario",
+                "CPM",
+                "Nivel"
+            ]
+        ].head(20),
+        use_container_width=True,
+        hide_index=True
+    )
 # =========================
 # POWERPOINT
 # =========================
