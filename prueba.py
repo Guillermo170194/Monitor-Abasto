@@ -3,43 +3,185 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import io
 import os
+import base64
 
 from pptx import Presentation
 from pptx.util import Inches, Pt
 
 st.set_page_config(page_title="Consolidada IMB", layout="wide")
+from PIL import Image
 
 # =========================
-# ESTILO
+# ESTILO MARK 1
 # =========================
 st.markdown("""
 <style>
+
+/* ===== APP ===== */
+.stApp {
+    background-color: #F4F6F9;
+    font-family: 'Segoe UI', sans-serif;
+    color: #1E1E1E;
+}
 html, body, [class*="css"] {
-    font-family: 'Noto Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1E1E1E;
 }
 
-.titulo {
-    color:#9F2241;
-    font-weight:800;
-    text-align:center;
+/* ===== HEADER ===== */
+.logo-card {
+    background: white;
+    padding: 12px;
+    border-radius: 18px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 110px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+.main-title {
+    font-size: 46px;
+    font-weight: 900;
+    color: #9F2241;
+    text-align: center;
+    margin-bottom: 0px;
+    letter-spacing: 1px;
 }
 
+.sub-title {
+    text-align: center;
+    color: #235B4E;
+    font-size: 18px;
+    margin-top: -8px;
+    margin-bottom: 30px;
+    font-weight: 500;
+}
+
+h1 {
+    color:#9F2241 !important;
+    font-weight:900 !important;
+    font-size:52px !important;
+    margin-bottom:0px !important;
+}
+
+h3 {
+    color:#235B4E !important;
+    font-weight:600 !important;
+    margin-top:-10px !important;
+}
+/* ===== SIDEBAR ===== */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(
+        180deg,
+        #235B4E 0%,
+        #163832 100%
+    );
+}
+
+section[data-testid="stSidebar"] * {
+    color: white !important;
+}
+
+/* ===== KPI PREMIUM ===== */
+.kpi-card {
+    background: white;
+    padding: 22px;
+    border-radius: 22px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    transition: 0.3s;
+    border-left: 8px solid #235B4E;
+}
+
+.kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.kpi-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.kpi-value {
+    font-size: 38px;
+    font-weight: 900;
+    color: #1E1E1E;
+}
+
+.kpi-icon {
+    font-size: 32px;
+}
+
+.kpi-green {
+    border-left: 8px solid #1FAE4B;
+}
+
+.kpi-red {
+    border-left: 8px solid #C62828;
+}
+
+.kpi-yellow {
+    border-left: 8px solid #F9A825;
+}
+
+.kpi-blue {
+    border-left: 8px solid #1565C0;
+}
+/* ===== TABLAS ===== */
+[data-testid="stDataFrame"] {
+    background: white;
+    border-radius: 18px;
+    padding: 10px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* ===== HEADERS TABLAS ===== */
 thead tr th {
     background-color:#235B4E !important;
     color:white !important;
     font-weight:bold !important;
+    border:none !important;
 }
 
-[data-testid="stDataFrame"] {
-    border:2px solid #235B4E;
+/* ===== BOTONES ===== */
+.stButton > button {
+    width: 100%;
+    border-radius: 12px;
+    height: 50px;
+    border: none;
+    background-color: #235B4E;
+    color: white;
+    font-weight: bold;
+    transition: 0.3s;
 }
+
+.stButton > button:hover {
+    background-color: #9F2241;
+    transform: scale(1.02);
+}
+
+/* ===== INPUTS ===== */
+.stTextInput input {
+    border-radius: 12px;
+}
+
+/* ===== SELECT ===== */
+div[data-baseweb="select"] {
+    background-color: white;
+    border-radius: 12px;
+}
+.stRadio > div {
+    background: rgba(255,255,255,0.08);
+    padding: 10px;
+    border-radius: 12px;
+}
+
 </style>
 """, unsafe_allow_html=True)
-
-st.markdown(
-    "<h1 class='titulo'>📊 Dashboard IMSS BIENESTAR - Abasto</h1>",
-    unsafe_allow_html=True
-)
 
 # =========================
 # ARCHIVO
@@ -48,22 +190,40 @@ st.markdown(
 # CARGA DE ARCHIVO
 # =========================
 
-st.sidebar.markdown("## 📂 Cargar archivo")
+st.sidebar.markdown("""
+# 🧠 MARK 1
 
-archivo = st.sidebar.file_uploader(
-    "Subir Consolidada",
-    type=["xlsb", "xlsx"]
-)
+### Centro de Monitoreo
 
-archivo_inv = st.sidebar.file_uploader(
-    "Subir Inventario",
-    type=["xlsx", "xlsb"]
+---
+""")
+menu = st.sidebar.radio(
+    "Navegación",
+    [
+        "🏠 Dashboard Nacional",
+        "📍 Estados",
+        "🔎 Buscar Clave",
+        "🚨 Alertas",
+        "📊 Analítica",
+        "📤 Exportaciones"
+    ]
 )
+with st.sidebar.expander("📂 Cargar archivos"):
 
-archivo_cpm = st.sidebar.file_uploader(
-    "Subir CPM",
-    type=["xlsx", "xlsb"]
-)
+    archivo = st.file_uploader(
+        "Consolidada",
+        type=["xlsb", "xlsx"]
+    )
+
+    archivo_inv = st.file_uploader(
+        "Inventario",
+        type=["xlsx", "xlsb"]
+    )
+
+    archivo_cpm = st.file_uploader(
+        "CPM",
+        type=["xlsx", "xlsb"]
+    )
 if (
     archivo is None or
     archivo_inv is None or
@@ -336,6 +496,38 @@ def cargar():
     return df, inv_group, cpm_group
 
 df, inv_group, cpm_group = cargar()
+# =========================
+# HEADER LIMPIO MARK 1
+# =========================
+
+col_logo1, col_logo2, col_titulo, col_status = st.columns([0.8,0.8,6,1.8])
+
+with col_logo1:
+    st.image(
+        "logo_imss.png",
+        width=75
+    )
+
+with col_logo2:
+    st.image(
+        "mexico.png",
+        width=70
+    )
+
+with col_titulo:
+
+    st.title("MARK 1")
+
+    st.subheader(
+        "Centro Nacional de Monitoreo Estratégico de Abasto"
+    )
+
+with col_status:
+
+    st.success(
+        "🟢 SISTEMA ACTIVO"
+    )
+st.markdown("<br>", unsafe_allow_html=True)
 # =========================
 # COLUMNAS
 # =========================
@@ -699,316 +891,859 @@ def crear_graficas(m):
 
     return fig_piezas, fig_montos, fig_ordenes, fig_claves
 
-# =========================
-# RESUMEN GENERAL NACIONAL
-# =========================
-metricas_general = calcular_metricas(df)
+if menu == "🏠 Dashboard Nacional":
+	
+    # =========================
+    # RANKING NACIONAL
+    # =========================
 
-st.markdown("## 🌎 Resumen general nacional")
+    st.markdown("## 🏆 Ranking nacional de estados")
 
-g1, g2, g3 = st.columns(3)
-g4, g5, g6 = st.columns(3)
+    concurrentes = [
+        "BAJA CALIFORNIA",
+        "BAJA CALIFORNIA SUR",
+        "CAMPECHE",
+        "CHIAPAS",
+        "CIUDAD DE MEXICO",
+        "COLIMA",
+        "GUERRERO",
+        "HIDALGO",
+        "MEXICO",
+        "MICHOACAN DE OCAMPO",
+        "MORELOS",
+        "NAYARIT",
+        "OAXACA",
+        "PUEBLA",
+        "QUINTANA ROO",
+        "SAN LUIS POTOSI",
+        "SINALOA",
+        "SONORA",
+        "TABASCO",
+        "TAMAULIPAS",
+        "TLAXCALA",
+        "VERACRUZ",
+        "YUCATAN",
+        "ZACATECAS"
+    ]
 
-with g4:
-    st.metric(
-        "📦 Inventario",
-        fmt(metricas_general["inv_total"])
+    no_concurrentes = [
+        "AGUASCALIENTES",
+        "CHIHUAHUA",
+        "COAHUILA DE ZARAGOZA",
+        "DURANGO",
+        "GUANAJUATO",
+        "JALISCO",
+        "NUEVO LEON",
+        "QUERETARO DE ARTEAGA"
+    ]
+
+    tipo_ranking = st.selectbox(
+        "Tipo de entidad",
+        [
+            "Todos",
+            "Concurrentes",
+            "No concurrentes"
+        ]
     )
 
-with g5:
-    st.metric(
-        "📈 CPM",
-        fmt(metricas_general["cpm_total"])
+    ranking = df.copy()
+
+    ranking["NIVEL_ABASTO"] = 0.0
+
+    mask = ranking["CPM"] > 0
+
+    ranking.loc[mask, "NIVEL_ABASTO"] = (
+        ranking["PIEZAS_INV"] /
+        ranking["CPM"]
     )
 
-with g1:
-    st.metric(
-        "🔵 Total emitido",
-        fmt(metricas_general["p"])
+    ranking.loc[
+        (ranking["PIEZAS_INV"] > 0) &
+        (ranking["CPM"] == 0),
+        "NIVEL_ABASTO"
+    ] = 2
+
+    # =========================
+    # COBERTURA REAL ESTATAL
+    # =========================
+
+    ranking_claves = (
+        ranking.groupby(
+            ["ENTIDAD", "CLAVE_MERGE"],
+            dropna=False
+        )
+        .agg({
+            "PIEZAS_INV": "max",
+            "CPM": "max"
+        })
+        .reset_index()
     )
 
-with g2:
-    st.metric(
-        "🟢 Total entregado",
-        fmt(metricas_general["e"])
+    ranking_claves["INV_VALIDO"] = (
+        ranking_claves.apply(
+            lambda x: x["PIEZAS_INV"]
+            if x["CPM"] > 0 else 0,
+            axis=1
+        )
     )
 
-with g3:
-    st.metric(
-        "🟡 Total en tránsito",
-        fmt(metricas_general["t"])
+    ranking_estados = (
+        ranking_claves.groupby("ENTIDAD")
+        .agg({
+            "INV_VALIDO": "sum",
+            "CPM": "sum"
+        })
+        .reset_index()
     )
 
-st.markdown("### 📋 Tabla nacional")
+    ranking_estados["NIVEL_ABASTO"] = (
+        ranking_estados["INV_VALIDO"] /
+        ranking_estados["CPM"]
+    )
 
-col_n1, col_n2, col_n3 = st.columns([1, 3, 1])
+    ranking_estados = ranking_estados.rename(columns={
+        "ENTIDAD": "Estado",
+        "INV_VALIDO": "Inventario",
+        "CPM": "CPM",
+        "NIVEL_ABASTO": "Nivel abasto"
+    })
 
-with col_n2:
+    # =========================
+    # FILTROS
+    # =========================
+
+    if tipo_ranking == "Concurrentes":
+
+        ranking_estados = ranking_estados[
+            ranking_estados["Estado"]
+            .isin(concurrentes)
+        ]
+
+    elif tipo_ranking == "No concurrentes":
+
+        ranking_estados = ranking_estados[
+            ranking_estados["Estado"]
+            .isin(no_concurrentes)
+        ]
+
+    # =========================
+    # ORDENAR
+    # =========================
+
+    ranking_estados = ranking_estados.sort_values(
+        "Nivel abasto"
+    )
+
+    # =========================
+    # FORMATO VISUAL
+    # =========================
+
+    ranking_estados["Inventario"] = (
+        ranking_estados["Inventario"]
+        .fillna(0)
+        .apply(lambda x: f"{int(x):,} piezas")
+    )
+
+    ranking_estados["CPM"] = (
+        ranking_estados["CPM"]
+        .fillna(0)
+        .apply(lambda x: f"{int(x):,} piezas")
+    )
+
+    ranking_estados["Nivel abasto"] = (
+        ranking_estados["Nivel abasto"]
+        .fillna(0)
+        .round(2)
+        .apply(lambda x: f"{x} meses")
+    )
+
     st.dataframe(
-        metricas_general["tabla"],
+        ranking_estados,
         use_container_width=True,
         hide_index=True
     )
+    # =========================
+    # INVENTARIO SIN CPM
+    # =========================
 
-st.divider()
-# =========================
-# BUSCADOR DE CLAVE
-# =========================
+    st.markdown("## 📦 Inventario sin CPM")
 
-st.markdown("## 🔎 Buscar clave nacional")
-
-clave_busqueda = st.text_input(
-    "Ingresar clave"
-)
-clave_busqueda = (
-    clave_busqueda
-    .strip()
-)
-
-if clave_busqueda:
-
-    df_busqueda = base_busqueda.copy()
-
-    df_busqueda = df_busqueda[
-        df_busqueda["CLAVE"]
-        .astype(str)
-        .str.contains(
-            clave_busqueda,
-            case=False,
-            na=False
-        )
-    ]
-
-    if len(df_busqueda) > 0:
-
-        df_busqueda["NIVEL_ABASTO"] = 0.0
-
-        mask = df_busqueda["CPM"] > 0
-
-        df_busqueda.loc[mask, "NIVEL_ABASTO"] = (
-            df_busqueda.loc[mask, "PIEZAS_INV"] /
-            df_busqueda.loc[mask, "CPM"]
-        )
-
-        df_busqueda.loc[
-            (df_busqueda["PIEZAS_INV"] > 0) &
-            (df_busqueda["CPM"] == 0),
-            "NIVEL_ABASTO"
-        ] = 2
-
-        def clasificar_busqueda(x):
-
-            if x == 0:
-                return "Agotado"
-
-            elif x < 1:
-                return "Próx agotarse"
-
-            elif x <= 1.5:
-                return "Bajo"
-
-            elif x <= 5:
-                return "Óptimo"
-
-            else:
-                return "Sobre stock"
-
-        df_busqueda["Clasificación"] = (
-            df_busqueda["NIVEL_ABASTO"]
-            .apply(clasificar_busqueda)
-        )
-
-        tabla_busqueda = df_busqueda.copy()
-        tabla_busqueda["Tránsito"] = (
-            tabla_busqueda[col_emitidas] -
-            tabla_busqueda[col_entregadas]
-        ).clip(lower=0)
-
-        tabla_busqueda["Tránsito"] = (
-            tabla_busqueda[col_emitidas] -
-            tabla_busqueda[col_entregadas]
-        ).clip(lower=0)
-
-        tabla_busqueda = tabla_busqueda.rename(columns={
-            "ENTIDAD": "Estado",
-            "CLAVE": "Clave",
-            "PIEZAS_INV": "Inventario",
-            "CPM": "CPM",
-            "NIVEL_ABASTO": "Nivel",
-            "Clasificación": "Clasificación",
-            col_entregadas: "Entregado",
-            col_emitidas: "Emitido"
+    sin_cpm_estados = (
+        ranking_claves[
+            (ranking_claves["CPM"] == 0) &
+            (ranking_claves["PIEZAS_INV"] > 0)
+        ]
+        .groupby("ENTIDAD")
+        .agg({
+            "PIEZAS_INV": "sum",
+            "CLAVE_MERGE": "count"
         })
+        .reset_index()
+    )
+    sin_cpm_estados = sin_cpm_estados.rename(columns={
+        "ENTIDAD": "Estado",
+        "PIEZAS_INV": "Inventario",
+        "CLAVE_MERGE": "Claves sin CPM"
+    })
+    sin_cpm_estados["Inventario"] = (
+        sin_cpm_estados["Inventario"]
+        .fillna(0)
+        .apply(lambda x: f"{int(x):,} piezas")
+    )
+    sin_cpm_estados["Claves sin CPM"] = (
+        sin_cpm_estados["Claves sin CPM"]
+        .fillna(0)
+        .apply(lambda x: f"{int(x):,} claves")
+    )
 
-        tabla_busqueda["Nivel"] = (
-            tabla_busqueda["Nivel"]
-            .round(2)
-        )
+    st.dataframe(
+        sin_cpm_estados,
+        use_container_width=True,
+        hide_index=True
+    )
+    # =========================
+    # RESUMEN GENERAL NACIONAL
+    # =========================
 
-        descripcion = (
-            str(df_busqueda.iloc[0][df.columns[3]])
-        )
+    metricas_general = calcular_metricas(df)
 
-        st.markdown(
-            f"### 🔎 Clave encontrada: {descripcion}"
-        )
+    st.markdown("## 🇲🇽 Resumen general nacional")
 
-        tabla_busqueda = tabla_busqueda.sort_values(
-            "Inventario",
-            ascending=False
-        )
+    g1, g2, g3 = st.columns(3)
+    g4, g5, g6 = st.columns(3)
 
-        # QUITAR COLUMNAS TÉCNICAS
-        tabla_busqueda = tabla_busqueda.drop(
-            columns=["CLAVE_MERGE"],
-            errors="ignore"
-        )
+    with g1:
+
+        st.markdown(f"""
+<div class="kpi-card kpi-blue">
+
+<div class="kpi-title">
+📦 Emitido
+</div>
+
+<div class="kpi-value">
+{fmt(metricas_general["p"])}
+</div>
+
+</div>
+""", unsafe_allow_html=True)
+
+    with g2:
+
+        st.markdown(f"""
+<div class="kpi-card kpi-green">
+
+<div class="kpi-title">
+🚚 Entregado
+</div>
+
+<div class="kpi-value">
+{fmt(metricas_general["e"])}
+</div>
+
+</div>
+""", unsafe_allow_html=True)
+
+    with g3:
+
+        st.markdown(f"""
+<div class="kpi-card kpi-yellow">
+
+<div class="kpi-title">
+⏳ En tránsito
+</div>
+
+<div class="kpi-value">
+{fmt(metricas_general["t"])}
+</div>
+
+</div>
+""", unsafe_allow_html=True)
+
+    with g4:
+
+        st.markdown(f"""
+<div class="kpi-card">
+
+<div class="kpi-title">
+📈 CPM
+</div>
+
+<div class="kpi-value">
+{fmt(metricas_general["cpm_total"])}
+</div>
+
+</div>
+""", unsafe_allow_html=True)
+
+    with g5:
+
+        st.markdown(f"""
+<div class="kpi-card kpi-red">
+
+<div class="kpi-title">
+🏥 Inventario
+</div>
+
+<div class="kpi-value">
+{fmt(metricas_general["inv_total"])}
+</div>
+
+</div>
+""", unsafe_allow_html=True)
+
+    st.markdown("### 📋 Tabla nacional")
+
+    col_n1, col_n2, col_n3 = st.columns([1, 3, 1])
+
+    with col_n2:
 
         st.dataframe(
-            tabla_busqueda,
+            metricas_general["tabla"],
             use_container_width=True,
             hide_index=True
         )
-# =========================
-# FILTRO
-# =========================
-estado_sel = st.selectbox(
-    "📍 Estado",
-    sorted(df[col_estado].dropna().unique())
-)
 
-df_f = df[df[col_estado] == estado_sel].copy()
-# =========================
-# RESUMEN ABASTO
-# =========================
+    st.divider()
+if menu == "🔎 Buscar Clave":
 
-df_f = df_f.copy()
+    # =========================
+    # BUSCADOR DE CLAVE
+    # =========================
 
-df_f["NIVEL_ABASTO"] = 0.0
+    st.markdown("## 🔎 Buscar clave nacional")
 
-mask = df_f["CPM"] > 0
-
-df_f.loc[mask, "NIVEL_ABASTO"] = (
-    df_f.loc[mask, "PIEZAS_INV"] /
-    df_f.loc[mask, "CPM"]
-)
-
-df_f.loc[
-    (df_f["PIEZAS_INV"] > 0) &
-    (df_f["CPM"] == 0),
-    "NIVEL_ABASTO"
-] = 2
-
-def clasificar_tabla(x):
-
-    if x == 0:
-        return "Agotado"
-
-    elif x < 1:
-        return "Próx agotarse"
-
-    elif x <= 1.5:
-        return "Bajo"
-
-    elif x <= 5:
-        return "Óptimo"
-
-    else:
-        return "Sobre stock"
-
-df_f["CLASIFICACION"] = (
-    df_f["NIVEL_ABASTO"]
-    .apply(clasificar_tabla)
-)
-abasto_claves = (
-    df_f.groupby(
-        [col_clave],
-        dropna=False
+    clave_busqueda = st.text_input(
+        "Ingresar clave"
     )
-    .agg({
-        "PIEZAS_INV": "sum",
-        "CPM": "sum",
-        "NIVEL_ABASTO": "first",
-        "CLASIFICACION": "first"
-    })
-    .reset_index()
-)
 
-abasto_claves.columns = [
-    "Clave",
-    "Inventario",
-    "CPM",
-    "Nivel",
-    "Clasificación"
-]
+    clave_busqueda = (
+        clave_busqueda
+        .strip()
+    )
 
-abasto_claves["Nivel"] = (
-    abasto_claves["Nivel"]
-    .round(2)
-)
+    if clave_busqueda:
 
-abasto_claves = abasto_claves.sort_values(
-    "Nivel"
-)
+        df_busqueda = base_busqueda.copy()
 
-metricas = calcular_metricas(df_f)
+        df_busqueda = df_busqueda[
+            df_busqueda["CLAVE"]
+            .astype(str)
+            .str.contains(
+                clave_busqueda,
+                case=False,
+                na=False
+            )
+        ]
 
-tabla_base = metricas["tabla"]
+        if len(df_busqueda) > 0:
 
-fig_piezas, fig_montos, fig_ordenes, fig_claves = crear_graficas(metricas)
+            df_busqueda["NIVEL_ABASTO"] = 0.0
 
-# =========================
-# TABLA STREAMLIT
-# =========================
-st.markdown(f"## 📋 Tabla operativa - {estado_sel}")
+            mask = df_busqueda["CPM"] > 0
 
-col1, col2, col3 = st.columns([1, 3, 1])
+            df_busqueda.loc[mask, "NIVEL_ABASTO"] = (
+                df_busqueda["PIEZAS_INV"] /
+                df_busqueda["CPM"]
+            )
 
-with col2:
+            df_busqueda.loc[
+                (df_busqueda["PIEZAS_INV"] > 0) &
+                (df_busqueda["CPM"] == 0),
+                "NIVEL_ABASTO"
+            ] = 2
+
+            def clasificar_busqueda(x):
+
+                if x == 0:
+                    return "Agotado"
+
+                elif x < 1:
+                    return "Próx agotarse"
+
+                elif x <= 1.5:
+                    return "Bajo"
+
+                elif x <= 5:
+                    return "Óptimo"
+
+                else:
+                    return "Sobre stock"
+
+            df_busqueda["Clasificación"] = (
+                df_busqueda["NIVEL_ABASTO"]
+                .apply(clasificar_busqueda)
+            )
+
+            tabla_busqueda = df_busqueda.copy()
+
+            tabla_busqueda["Tránsito"] = (
+                tabla_busqueda[col_emitidas] -
+                tabla_busqueda[col_entregadas]
+            ).clip(lower=0)
+
+            tabla_busqueda = tabla_busqueda.rename(columns={
+                "ENTIDAD": "Estado",
+                "CLAVE": "Clave",
+                "PIEZAS_INV": "Inventario",
+                "CPM": "CPM",
+                "NIVEL_ABASTO": "Nivel",
+                "Clasificación": "Clasificación",
+                col_entregadas: "Entregado",
+                col_emitidas: "Emitido"
+            })
+
+            tabla_busqueda["Nivel"] = (
+                tabla_busqueda["Nivel"]
+                .round(2)
+            )
+
+            descripcion = (
+                str(df_busqueda.iloc[0][df.columns[3]])
+            )
+
+            st.markdown(
+                f"### 🔎 Clave encontrada: {descripcion}"
+            )
+
+            tabla_busqueda = tabla_busqueda.sort_values(
+                "Inventario",
+                ascending=False
+            )
+
+            tabla_busqueda = tabla_busqueda.drop(
+                columns=["CLAVE_MERGE"],
+                errors="ignore"
+            )
+
+            st.dataframe(
+                tabla_busqueda,
+                use_container_width=True,
+                hide_index=True
+            )
+if menu == "📍 Estados":
+
+    # =========================
+    # FILTRO
+    # =========================
+
+    estado_sel = st.selectbox(
+        "📍 Estado",
+        sorted(df[col_estado].dropna().unique())
+    )
+
+    df_f = df[df[col_estado] == estado_sel].copy()
+    # =========================
+    # MÉTRICAS EJECUTIVAS
+    # =========================
+
+    base_estado = (
+        df_f.groupby(
+            ["ENTIDAD", "CLAVE_MERGE"],
+            dropna=False
+        )
+        .agg({
+            "PIEZAS_INV": "max",
+            "CPM": "max"
+        })
+        .reset_index()
+    )
+
+    inventario_total = (
+        base_estado["PIEZAS_INV"]
+        .sum()
+    )
+
+    inventario_sin_cpm = (
+        base_estado[
+            (base_estado["CPM"] == 0) &
+            (base_estado["PIEZAS_INV"] > 0)
+        ]["PIEZAS_INV"]
+        .sum()
+    )
+
+    inventario_con_cpm = (
+        base_estado[
+            base_estado["CPM"] > 0
+        ]["PIEZAS_INV"]
+        .sum()
+    )
+
+    cpm_total_estado = (
+        base_estado["CPM"]
+        .sum()
+    )
+
+    nivel_estado = 0
+
+    if cpm_total_estado > 0:
+
+        nivel_estado = (
+            inventario_con_cpm /
+            cpm_total_estado
+        )
+
+    e1, e2, e3, e4 = st.columns(4)
+
+    with e1:
+
+        st.markdown(f"""
+        <div class="kpi-card kpi-blue">
+
+        <div class="kpi-title">
+        📈 Nivel de abasto
+        </div>
+
+        <div class="kpi-value">
+        {nivel_estado:.2f} meses
+        </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+    with e2:
+
+        st.markdown(f"""
+        <div class="kpi-card kpi-green">
+
+        <div class="kpi-title">
+        📦 Inventario total
+        </div>
+
+        <div class="kpi-value">
+        {inventario_total:,.0f}
+        </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+    with e3:
+
+        st.markdown(f"""
+        <div class="kpi-card kpi-yellow">
+
+        <div class="kpi-title">
+        📦 Inventario con CPM
+        </div>
+
+        <div class="kpi-value">
+        {inventario_con_cpm:,.0f}
+        </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+    with e4:
+
+        st.markdown(f"""
+        <div class="kpi-card kpi-red">
+
+        <div class="kpi-title">
+        🚨 Inventario sin CPM
+        </div>
+
+        <div class="kpi-value">
+        {inventario_sin_cpm:,.0f}
+        </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+
+    # =========================
+    # RESUMEN ABASTO
+    # =========================
+
+    df_f = df_f.copy()
+
+    df_f["NIVEL_ABASTO"] = 0.0
+
+    mask = df_f["CPM"] > 0
+
+    df_f.loc[mask, "NIVEL_ABASTO"] = (
+        df_f["PIEZAS_INV"] /
+        df_f["CPM"]
+    )
+
+    df_f.loc[
+        (df_f["PIEZAS_INV"] > 0) &
+        (df_f["CPM"] == 0),
+        "NIVEL_ABASTO"
+    ] = 2
+
+    def clasificar_tabla(x):
+
+        if x == 0:
+            return "Agotado"
+
+        elif x < 1:
+            return "Próx agotarse"
+
+        elif x <= 1.5:
+            return "Bajo"
+
+        elif x <= 5:
+            return "Óptimo"
+
+        else:
+            return "Sobre stock"
+
+    df_f["CLASIFICACION"] = (
+        df_f["NIVEL_ABASTO"]
+        .apply(clasificar_tabla)
+    )
+
+    abasto_claves = (
+        df_f.groupby(
+            [col_clave],
+            dropna=False
+        )
+        .agg({
+            "PIEZAS_INV": "sum",
+            "CPM": "sum",
+            "NIVEL_ABASTO": "first",
+            "CLASIFICACION": "first"
+        })
+        .reset_index()
+    )
+
+    abasto_claves.columns = [
+        "Clave",
+        "Inventario",
+        "CPM",
+        "Nivel",
+        "Clasificación"
+    ]
+
+    abasto_claves["Nivel"] = (
+        abasto_claves["Nivel"]
+        .round(2)
+    )
+
+    abasto_claves = abasto_claves.sort_values(
+        "Nivel"
+    )
+
+    metricas = calcular_metricas(df_f)
+
+    tabla_base = metricas["tabla"]
+
+    fig_piezas, fig_montos, fig_ordenes, fig_claves = crear_graficas(metricas)
+
+    # =========================
+    # TABLA STREAMLIT
+    # =========================
+
+    st.markdown(f"## 📋 Tabla operativa - {estado_sel}")
+
+    col1, col2, col3 = st.columns([1, 3, 1])
+
+    with col2:
+
+        st.dataframe(
+            tabla_base,
+            use_container_width=True,
+            hide_index=True
+        )
+
+    # =========================
+    # VISUALIZACIÓN
+    # =========================
+
+    resumen_abasto = (
+        abasto_claves["Clasificación"]
+        .value_counts()
+        .reset_index()
+    )
+
+    resumen_abasto.columns = [
+        "Clasificación",
+        "Total claves"
+    ]
+
+    st.markdown(f"## 🏥 Resumen de abasto - {estado_sel}")
+
     st.dataframe(
-        tabla_base,
+        resumen_abasto,
         use_container_width=True,
         hide_index=True
     )
 
-# =========================
-# VISUALIZACIÓN
-# =========================
-resumen_abasto = (
-    abasto_claves["Clasificación"]
-    .value_counts()
-    .reset_index()
-)
+    st.markdown(f"## 📊 Visualización - {estado_sel}")
 
-resumen_abasto.columns = [
-    "Clasificación",
-    "Total claves"
-]
+    c1, c2 = st.columns(2)
+    c3, c4 = st.columns(2)
 
-st.markdown(f"## 🏥 Resumen de abasto - {estado_sel}")
+    with c1:
+        st.pyplot(fig_piezas)
 
-st.dataframe(
-    resumen_abasto,
-    use_container_width=True,
-    hide_index=True
-)
-st.markdown(f"## 📊 Visualización - {estado_sel}")
+    with c2:
+        st.pyplot(fig_montos)
 
-c1, c2 = st.columns(2)
-c3, c4 = st.columns(2)
+    with c3:
+        st.pyplot(fig_ordenes)
 
-with c1:
-    st.pyplot(fig_piezas)
+    with c4:
+        st.pyplot(fig_claves)
+if menu == "🚨 Alertas":
 
-with c2:
-    st.pyplot(fig_montos)
+    st.markdown("## 🚨 Centro de alertas")
 
-with c3:
-    st.pyplot(fig_ordenes)
+    alertas = base_busqueda.copy()
 
-with c4:
-    st.pyplot(fig_claves)
+    alertas["NIVEL_ABASTO"] = 0.0
 
+    mask = alertas["CPM"] > 0
+
+    alertas.loc[mask, "NIVEL_ABASTO"] = (
+        alertas["PIEZAS_INV"] /
+        alertas["CPM"]
+    )
+
+    alertas.loc[
+        (alertas["PIEZAS_INV"] > 0) &
+        (alertas["CPM"] == 0),
+        "NIVEL_ABASTO"
+    ] = 2
+
+    # =========================
+    # ALERTAS
+    # =========================
+
+    agotado = alertas[
+        alertas["NIVEL_ABASTO"] == 0
+    ]
+
+    proximo = alertas[
+        (alertas["NIVEL_ABASTO"] > 0) &
+        (alertas["NIVEL_ABASTO"] < 1)
+    ]
+
+    sobrestock = alertas[
+        alertas["NIVEL_ABASTO"] > 5
+    ]
+
+    sin_cpm = alertas[
+        (alertas["CPM"] == 0) &
+        (alertas["PIEZAS_INV"] > 0)
+    ]
+
+    # =========================
+    # KPIs ALERTAS
+    # =========================
+
+    a1, a2, a3, a4 = st.columns(4)
+
+    with a1:
+
+        st.markdown(f"""
+        <div class="kpi-card kpi-red">
+
+        <div class="kpi-title">
+        🔴 Agotado
+        </div>
+
+        <div class="kpi-value">
+        {len(agotado):,}
+        </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+    with a2:
+
+        st.markdown(f"""
+        <div class="kpi-card kpi-yellow">
+
+        <div class="kpi-title">
+        🟠 Próximo agotarse
+        </div>
+
+        <div class="kpi-value">
+        {len(proximo):,}
+        </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+    with a3:
+
+        st.markdown(f"""
+        <div class="kpi-card kpi-blue">
+
+        <div class="kpi-title">
+        🔵 Sobre stock
+        </div>
+
+        <div class="kpi-value">
+        {len(sobrestock):,}
+        </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+    with a4:
+
+        st.markdown(f"""
+        <div class="kpi-card kpi-green">
+
+        <div class="kpi-title">
+        🟢 Sin CPM
+        </div>
+
+        <div class="kpi-value">
+        {len(sin_cpm):,}
+        </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+    # =========================
+    # TABLAS ALERTAS
+    # =========================
+
+    st.markdown("### 🔴 Claves agotadas")
+
+    st.dataframe(
+        agotado[
+            [
+                "ENTIDAD",
+                "CLAVE",
+                "PIEZAS_INV",
+                "CPM"
+            ]
+        ],
+        use_container_width=True,
+        hide_index=True
+    )
+    # =========================
+    # EXPORTAR ALERTAS
+    # =========================
+
+    excel_alertas = agotado.copy()
+
+    excel_alertas = excel_alertas[
+        [
+            "ENTIDAD",
+            "CLAVE",
+            "PIEZAS_INV",
+            "CPM",
+            "NIVEL_ABASTO"
+        ]
+    ]
+
+    archivo_excel = "alertas_criticas.xlsx"
+
+    excel_alertas.to_excel(
+        archivo_excel,
+        index=False
+    )
+
+    with open(archivo_excel, "rb") as f:
+
+        st.download_button(
+            "⬇ Descargar alertas críticas",
+            f,
+            file_name=archivo_excel
+        )
 # =========================
 # POWERPOINT
 # =========================
