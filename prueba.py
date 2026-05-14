@@ -508,27 +508,18 @@ def calcular_metricas(df_estado):
         .apply(clasificar)
     )
 
-    df_estado["Emitido"] = (
-        df_estado[col_emitidas]
-        .astype(str)
-        .str.replace(",", "", regex=False)
-        .str.strip()
-    )
-
     df_estado["Emitido"] = pd.to_numeric(
-        df_estado["Emitido"],
+        df_estado[col_emitidas],
         errors="coerce"
     ).fillna(0)
 
-    df_estado["Entregado"] = (
-        df_estado[col_entregadas]
-        .astype(str)
-        .str.replace(",", "", regex=False)
-        .str.strip()
-    )
-
     df_estado["Entregado"] = pd.to_numeric(
-        df_estado["Entregado"],
+        df_estado[col_entregadas],
+        errors="coerce"
+    ).fillna(0)
+
+    df_estado[col_precio] = pd.to_numeric(
+        df_estado[col_precio],
         errors="coerce"
     ).fillna(0)
     df_estado[col_precio] = pd.to_numeric(
