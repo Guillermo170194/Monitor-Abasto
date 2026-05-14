@@ -499,20 +499,7 @@ df, inv_group, cpm_group = cargar()
 # =========================
 # HEADER LIMPIO MARK 1
 # =========================
-
-col_logo1, col_logo2, col_titulo, col_status = st.columns([0.8,0.8,6,1.8])
-
-with col_logo1:
-    st.image(
-        "logo_imss.png",
-        width=75
-    )
-
-with col_logo2:
-    st.image(
-        "mexico.png",
-        width=70
-    )
+col_titulo, col_status = st.columns([6,1.5])
 
 with col_titulo:
 
@@ -527,7 +514,7 @@ with col_status:
     st.success(
         "🟢 SISTEMA ACTIVO"
     )
-st.markdown("<br>", unsafe_allow_html=True)
+
 # =========================
 # COLUMNAS
 # =========================
