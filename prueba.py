@@ -234,9 +234,11 @@ if (
 @st.cache_data(show_spinner=False)
 def cargar():
     reemplazos = {
-        "MICHOACÁN": "MICHOACAN",
-        "MICHOACÁN DE OCAMPO": "MICHOACAN",
-        "MICHOACAN DE OCAMPO": "MICHOACAN",
+        "MICHOACAN": "MICHOACAN DE OCAMPO",
+        "CIUDAD DE MEXICO": "CIUDAD DE MEXICO",
+        "CDMX": "CIUDAD DE MEXICO",
+        "MEXICO D.F.": "CIUDAD DE MEXICO",
+        "DISTRITO FEDERAL": "CIUDAD DE MEXICO",
         "BAJA SUR": "BAJA CALIFORNIA SUR",
         "B.C.S.": "BAJA CALIFORNIA SUR",
         "BCS": "BAJA CALIFORNIA SUR"
@@ -389,7 +391,6 @@ def cargar():
         .reset_index()
     )
     # =========================
-        # =========================
     # LIMPIAR CONSOLIDADA
     # =========================
 
@@ -407,6 +408,8 @@ def cargar():
         df["ENTIDAD"]
         .replace(reemplazos)
     )
+
+    df[df.columns[1]] = df["ENTIDAD"]
 
     df["CLAVE"] = (
         df[df.columns[2]]
@@ -896,7 +899,7 @@ if menu == "🏠 Dashboard Nacional":
         "GUERRERO",
         "HIDALGO",
         "MEXICO",
-        "MICHOACAN DE OCAMPO",
+        "MICHOACAN",
         "MORELOS",
         "NAYARIT",
         "OAXACA",
@@ -1314,11 +1317,22 @@ if menu == "📍 Estados":
     # FILTRO
     # =========================
 
-    estado_sel = st.selectbox(
-        "📍 Estado",
-        sorted(df[col_estado].dropna().unique())
+    estados_unicos = (
+        df[col_estado]
+        .astype(str)
+        .str.strip()
+        .str.upper()
+        .str.normalize("NFKD")
+        .str.encode("ascii", errors="ignore")
+        .str.decode("utf-8")
+        .dropna()
+        .unique()
     )
 
+    estado_sel = st.selectbox(
+        "📍 Estado",
+        sorted(estados_unicos)
+    )
     df_f = df[df[col_estado] == estado_sel].copy()
     # =========================
     # MÉTRICAS EJECUTIVAS
