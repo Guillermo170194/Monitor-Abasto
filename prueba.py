@@ -1481,12 +1481,15 @@ if menu == "📍 Estados":
 
     abasto_claves = (
         df_f.groupby(
-            [col_clave],
+            ["CLAVE_MERGE"],
             dropna=False
         )
         .agg({
-            "PIEZAS_INV": "sum",
-            "CPM": "sum",
+            col_clave: "first",
+            "PIEZAS_INV": "max",
+            "CPM": "max",
+            col_emitidas: "sum",
+            col_entregadas: "sum",
             "NIVEL_ABASTO": "first",
             "CLASIFICACION": "first"
         })
@@ -1494,12 +1497,35 @@ if menu == "📍 Estados":
     )
 
     abasto_claves.columns = [
+        "CLAVE_MERGE",
         "Clave",
         "Inventario",
         "CPM",
+        "Emitido",
+        "Entregado",
         "Nivel",
         "Clasificación"
     ]
+    abasto_claves["Tránsito"] = (
+        abasto_claves["Emitido"] -
+        abasto_claves["Entregado"]
+    ).clip(lower=0)
+    abasto_claves = abasto_claves[
+        [
+            "Clave",
+            "Inventario",
+            "CPM",
+            "Emitido",
+            "Tránsito",
+            "Entregado",
+            "Nivel",
+            "Clasificación"
+        ]
+    ]
+    abasto_claves = abasto_claves.drop(
+        columns=["CLAVE_MERGE"],
+        errors="ignore"
+    )
 
     abasto_claves["Nivel"] = (
         abasto_claves["Nivel"]
@@ -1546,7 +1572,284 @@ if menu == "📍 Estados":
         "Clasificación",
         "Total claves"
     ]
+    # =========================
+    # EXPORTAR EXCEL ESTATAL
+    # =========================
 
+    archivo_estado = f"Analisis_{estado_sel}.xlsx"
+
+    abasto_export = abasto_claves.copy()
+
+    with pd.ExcelWriter(
+        archivo_estado,
+        engine="openpyxl"
+    ) as writer:
+
+        abasto_export.to_excel(
+            writer,
+            index=False,
+            startrow=1,
+            sheet_name="Análisis"
+        )
+
+        wb = writer.book
+        ws = writer.sheets["Análisis"]
+        from openpyxl.styles import (
+            Font,
+            PatternFill,
+            Border,
+            Side,
+            Alignment
+        )
+        # =========================
+        # TITULO PRINCIPAL
+        # =========================
+
+        ws.merge_cells("A1:H1")
+
+        ws["A1"] = f"Análisis estatal - {estado_sel}"
+
+        ws["A1"].font = Font(
+            name="Noto Sans",
+            size=18,
+            bold=True,
+            color="FFFFFF"
+        )
+
+        ws["A1"].fill = PatternFill(
+            start_color="235B4E",
+            end_color="235B4E",
+            fill_type="solid"
+        )
+
+        ws["A1"].alignment = Alignment(
+            horizontal="center",
+            vertical="center"
+        )
+
+        ws.row_dimensions[1].height = 28
+
+        # =========================
+        # BAJAR TABLA
+        # =========================
+
+
+        # =========================
+        # ESTILOS
+        # =========================
+
+        verde = "235B4E"
+
+        fill_header = PatternFill(
+            start_color=verde,
+            end_color=verde,
+            fill_type="solid"
+        )
+
+        font_header = Font(
+            color="FFFFFF",
+            bold=True,
+            name="Noto Sans",
+            size=11
+        )
+
+        font_body = Font(
+            name="Noto Sans",
+            size=10
+        )
+
+        thin = Side(
+            border_style="thin",
+            color="000000"
+        )
+
+        border = Border(
+            left=thin,
+            right=thin,
+            top=thin,
+            bottom=thin
+        )
+
+        alignment = Alignment(
+            horizontal="center",
+            vertical="center"
+        )
+        # =========================
+        # RESUMEN EJECUTIVO
+        # =========================
+
+        # Separación visual
+        ws.column_dimensions["I"].width = 28
+        ws.column_dimensions["J"].width = 30
+        ws.column_dimensions["K"].width = 22
+
+        # Título
+        ws.merge_cells("J2:K2")
+
+        ws["J2"] = "Resumen ejecutivo"
+
+        ws["J2"].font = Font(
+            name="Noto Sans",
+            size=14,
+            bold=True,
+            color="FFFFFF"
+        )
+
+        ws["J2"].fill = PatternFill(
+            start_color="235B4E",
+            end_color="235B4E",
+            fill_type="solid"
+        )
+
+        ws["J2"].alignment = Alignment(
+            horizontal="center",
+            vertical="center"
+        )
+
+        resumen = [
+            ["Nivel abasto", f"{nivel_estado:.2f} meses"],
+            ["Inventario total", f"{inventario_total:,.0f}"],
+            ["Inventario con CPM", f"{inventario_con_cpm:,.0f}"],
+            ["Inventario sin CPM", f"{inventario_sin_cpm:,.0f}"]
+        ]
+
+        fila = 3
+
+        for titulo, valor in resumen:
+
+            ws[f"J{fila}"] = titulo
+            ws[f"K{fila}"] = valor
+
+            # TITULO
+            ws[f"J{fila}"].font = Font(
+                bold=True,
+                name="Noto Sans",
+                color="FFFFFF"
+            )
+
+            ws[f"J{fila}"].fill = PatternFill(
+                start_color="9F2241",
+                end_color="9F2241",
+                fill_type="solid"
+            )
+
+            # VALOR
+            ws[f"K{fila}"].font = Font(
+                bold=True,
+                name="Noto Sans"
+            )
+
+            # BORDES
+            ws[f"J{fila}"].border = border
+            ws[f"K{fila}"].border = border
+
+            # ALINEACIÓN
+            ws[f"J{fila}"].alignment = alignment
+            ws[f"K{fila}"].alignment = alignment
+
+            fila += 1
+        # =========================
+        # ENCABEZADOS
+        # =========================
+
+        for cell in ws[2]:
+
+            cell.fill = fill_header
+            cell.font = font_header
+            cell.border = border
+            cell.alignment = alignment
+
+        # =========================
+        # CUERPO
+        # =========================
+
+        for row in ws.iter_rows(
+            min_row=3,
+            max_col=8
+        ):
+
+            for cell in row:
+
+                cell.font = font_body
+                cell.border = border
+                cell.alignment = alignment
+        # =========================
+        # QUITAR BORDE DERECHO
+        # =========================
+
+        for cell in ws["H"]:
+
+            cell.border = Border(
+                left=thin,
+                top=thin,
+                bottom=thin
+            )
+
+        # =========================
+        # FORMATOS NUMÉRICOS
+        # =========================
+
+        columnas_numericas = [
+            "B",
+            "C",
+            "D",
+            "E",
+            "F"
+        ]
+
+        for col in columnas_numericas:
+
+            for cell in ws[col][1:]:
+
+                cell.number_format = '#,##0'
+
+        # =========================
+        # AUTOAJUSTE
+        # =========================
+
+        from openpyxl.utils import get_column_letter
+
+        for i, col in enumerate(ws.columns, 1):
+
+            max_length = 0
+
+            column = get_column_letter(i)
+
+            for cell in col:
+
+                try:
+
+                    if cell.value is not None:
+
+                        max_length = max(
+                            max_length,
+                            len(str(cell.value))
+                        )
+
+                except:
+                    pass
+
+            adjusted_width = max_length + 5
+
+            ws.column_dimensions[column].width = adjusted_width
+        # =========================
+        # FILTRO
+        # =========================
+
+        ws.auto_filter.ref = "A2:H2"
+
+        # =========================
+        # CONGELAR
+        # =========================
+
+        ws.freeze_panes = "A3"
+    with open(archivo_estado, "rb") as f:
+
+        st.download_button(
+            "⬇ Descargar análisis estatal",
+            f,
+            file_name=archivo_estado
+        )
     st.markdown(f"## 🏥 Resumen de abasto - {estado_sel}")
 
     st.dataframe(
