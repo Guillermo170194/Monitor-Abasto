@@ -1294,8 +1294,73 @@ if menu == "🔎 Buscar Clave":
 
             st.markdown(
                 f"### 🔎 Clave encontrada: {descripcion}"
+
+            )
+            # =========================
+            # REDISTRIBUCIÓN SUGERIDA
+            # =========================
+
+            st.markdown("## 🔄 Redistribución sugerida")
+
+            receptores = (
+                tabla_busqueda[
+                    tabla_busqueda["Nivel"] < 1
+                ]
+                .sort_values("Nivel")
             )
 
+            donadores = (
+                tabla_busqueda[
+                    tabla_busqueda["Nivel"] > 5
+                ]
+                .sort_values(
+                    "Nivel",
+                    ascending=False
+                )
+            )
+
+            sugerencias = []
+
+            total = min(
+                len(receptores),
+                len(donadores)
+            )
+
+            for i in range(total):
+
+                recibe = receptores.iloc[i]
+                dona = donadores.iloc[i]
+
+                sugerencias.append({
+                    "Recibe": recibe["Estado"],
+                    "Nivel receptor": round(
+                        recibe["Nivel"],
+                        2
+                    ),
+                    "Dona": dona["Estado"],
+                    "Nivel donador": round(
+                        dona["Nivel"],
+                        2
+                    )
+                })
+
+            sugerencias_df = pd.DataFrame(
+                sugerencias
+            )
+
+            if len(sugerencias_df) > 0:
+
+                st.dataframe(
+                    sugerencias_df,
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+            else:
+
+                st.success(
+                    "No se detectaron redistribuciones sugeridas."
+            )
             tabla_busqueda = tabla_busqueda.sort_values(
                 "Inventario",
                 ascending=False
@@ -1310,7 +1375,7 @@ if menu == "🔎 Buscar Clave":
                 tabla_busqueda,
                 use_container_width=True,
                 hide_index=True
-            )
+                )
 if menu == "📍 Estados":
 
     # =========================
