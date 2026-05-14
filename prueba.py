@@ -762,8 +762,6 @@ clave_busqueda = st.text_input(
 )
 clave_busqueda = (
     clave_busqueda
-    .replace(".", "")
-    .replace(" ", "")
     .strip()
 )
 
